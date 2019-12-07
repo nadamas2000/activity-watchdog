@@ -1,0 +1,95 @@
+#####################################################################
+# Created by: Nahúm Manuel Martín Vegas                             #
+# URL: https://github.com/nadamas2000/activity-watchdog             #
+# File: idle-watchdog.shlib                                         #
+# Version: V1                                                       #
+# Date: 04-dec-2019                                                 #
+# Developed in: Facultat d´informàtica de Barcelona (FIB)           #
+#               Universitat Politécnica de Catalunya (UPC)          #
+#                                                                   #
+# Project name: Activity-watchdog for Raspberry Pi (Raspbian linux) #
+# Project files:        activity-watchdog.sh                        #
+#                       activity-watchdog.conf                      #
+#                       software-watchdog.shlib                     #
+#                       idle-watchdog.shlib                         #
+#####################################################################
+
+
+# Timefile with local execution address
+TIMEFILE=$EXEDIR"/"$TIMEFILENAME
+
+########################## FUNCTIONS ###########################
+
+# Messaget to Timefile
+msgToTimefile () {
+        $(echo $1 >> $TIMEFILE)
+
+}
+
+# Data that contains Timefile
+timefileWriter () {
+        if $TIMEFILE_ENABLED; then
+                let isec=$(( ($1 /        1000 ) % 60 ))
+                let imin=$(( ($1 /    (60*1000)) % 60 ))
+                let ihor=$(( ($1 / (60*60*1000)) % 60 ))
+
+                date > $TIMEFILE        # New Timefile
+                msgToTimefile "Idle time: "$1" = "$ihor"h "$imin"m "$isec"s"
+                msgToTimefile "Idle max: $MINUTS_IN_IDLE_STATE m"
+                msgToTimefile "Idle stop: $MINUTS_IN_IDLE_STATE m $SECONDS_TO_CLOSE s"
+
+        fi
+}
+
+# Add info to timefile that contains the idle state.
+addInfoToTimefile () {
+        if $TIMEFILE_ENABLED; then
+                let msgcase=$1
+                if [ $msgcase -eq 1 ]; then
+                        msgToTimefile "Watchdog up (idle < idle_stop): $idle < $idle_stop"
+                fi
+                if [ $msgcase -eq 2 ]; then
+                        msgToTimefile "Watchdog restarting $PROC_NAME_TO_KILL (idle > idle_max): $idl$
+                fi
+                if [ $msgcase -eq 3 ]; then
+                        msgToTimefile "Watchdog down (idle > idle_stop): $idle > $idle_stop"
+                fi
+        fi
+}
+
+# Killing process list function
+killProc () {
+        msgToLog "Idle time exceded: $idle"
+        for i in "${IDLE_KILL_LIST[@]}"
+        do
+                local PIDK=($(pgrep -u $USER $i))
+                if [ -n "$PIDK" ]; then
+                        killall -9 $i
+                        msgToLog "Command to kill $i executed"
+                fi
+        done
+        sleep $SECONDS_TO_CLOSE
+}
+
+
+######################## MAIN FUNCTION ###########################
+idleWatchdog () {
+        export DISPLAY=:0
+        idle=$(sudo -u pi xprintidle)
+        idle_max=$(( $MINUTS_IN_IDLE_STATE * 60 * 1000 ))
+        idle_stop=$(( $idle_max + ($SECONDS_TO_CLOSE * 1000) ))
+        timefileWriter $idle
+
+        if [ $idle -lt $idle_stop ];
+        then
+                $(addInfoToTimefile 1)
+                if [[ $idle -gt $idle_max ]];
+                then
+                        $(addInfoToTimefile 2)
+                        $(killProc)
+                fi
+        else
+                $(addInfoToTimefile 3)
+        fi
+
+}

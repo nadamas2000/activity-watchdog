@@ -1,0 +1,105 @@
+#####################################################################
+# Created by: Nahúm Manuel Martín Vegas                             #
+# URL: https://github.com/nadamas2000/activity-watchdog             #
+# File: software-watchdog.shlib                                     #
+# Version: V1                                                       #
+# Date: 04-dec-2019                                                 #
+# Developed in: Facultat d´informàtica de Barcelona (FIB)           #
+#               Universitat Politécnica de Catalunya (UPC)          #
+#                                                                   #
+# Project name: Activity-watchdog for Raspberry Pi (Raspbian linux) #
+# Project files:        activity-watchdog.sh                        #
+#                       activity-watchdog.conf                      #
+#                       software-watchdog.shlib                     #
+#                       idle-watchdog.shlib                         #
+#####################################################################
+
+
+# Function that inspect the user executed programs and force execution
+# all software on configuration parameter (FORCE_LIST_PROC)
+watchForcedList () {
+        local i=0
+        while [[ i -lt ${#FORCE_LIST_PROC[@]} ]];
+        do
+                declare -a PID0
+                local PROC="${FORCE_LIST_PROC[i]}"
+                PID0=($(pgrep -u $USER $PROC | cut -d " " -f1))
+                if [[ -z "${PID0[0]}" ]]; then
+                        msgToLog "$PROC is not running"
+                        i=$i+1
+                        local EPROC=${FORCE_LIST_PROC[i]}
+                        msgToLog "Executing $EPROC"
+                        $EPROC
+                        sleep 2
+
+                        msgToLog "$PROC restarted"
+                        i=$i+1
+                else
+                        i=$i+2
+                fi
+
+        done
+}
+
+
+# Function that inspect the user executed programs and force to close
+# all software on configuration parameters (BLACKLIST_PROC, EXCEPTION_LIST)
+watchBlacklist () {
+        declare -a EXCEPTION_PIDs PS PIDs EXEC
+        PIDs=($(pgrep -u $USER -a | cut -d " " -f1))
+        PGREP=$(pgrep -u $USER -a | cut -d " " -f2-10)
+        PGREP=$(echo ${PGREP// /ç})     # Replace scapaces by 'ç'
+        EXEC=($(echo $PGREP))           # Convert text to strings array
+
+        local i=0
+        while [[ i -lt ${#EXCEPTION_LIST[@]} ]]; do
+                local PROC=${EXCEPTION_LIST[i]}
+                e=0
+                while [[ e -lt "${#PIDs[@]}" ]]; do
+                        EXECPROC=$(echo ${EXEC[e]} | tr -s 'ç' ' ')     # Replace 'ç' by spaces
+                        if [[ $EXECPROC = $PROC ]]; then
+                                EXCEPTION_PIDs+=${PIDs[e]}
+                        fi
+                        e=$e+1
+                done
+                i=$i+1
+        done
+
+        declare -a BLACKLIST_PIDs PROCEDs
+        i=0
+        while [[ i -lt ${#BLACKLIST_PROC[@]} ]]; do
+                local PROC="${BLACKLIST_PROC[i]}"
+                BLACKLIST_PIDs=($(pgrep -u $USER $PROC))
+                for d in "${EXCEPTION_PIDs[@]}"; do
+                        BLACKLIST_PIDs=( ${BLACKLIST_PIDs[@]/$d} )
+                done
+
+                i=$i+1
+                if [[ ${#BLACKLIST_PIDs[@]} -gt 0 && ${BLACKLIST_PIDs[0]} -ne 0 ]]; then
+                        for k in "${BLACKLIST_PIDs[@]}"; do
+                                msgToLog "$PROC detected with PID: $k"
+                                sudo pkill $k
+                        done
+                        local VPROC="${BLACKLIST_PROC[i]}"
+                        msgToLog "Executing $VPROC"
+                        $VPROC >> $LOGFILE
+                        sleep 2
+                        msgToLog "Blacklist violation procedure executed"
+                fi
+                i=$i+1
+        done
+}
+
+
+# Main software function to execute the different procedures depends by
+# activation configuration especified inside config file
+#(FORCE_LIST_WATCHDOG_ENABLED, BLACKLIST_WATCHDOG_ENABLED)
+softwareWatchdog () {
+        if $FORCE_LIST_WATCHDOG_ENABLED; then
+                watchForcedList
+        fi
+        if $BLACKLIST_WATCHDOG_ENABLED; then
+                watchBlacklist
+        fi
+}
+
