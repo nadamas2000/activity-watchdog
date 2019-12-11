@@ -21,6 +21,24 @@ export DISPLAY=:0
 SOURCE=${BASH_SOURCE[0]}
 EXEDIR=$(dirname $SOURCE)
 
+# Default parameters. This parameters are changed by activity-watchdog.conf
+USER="username"
+LOGFILEDIR=$EXEDIR
+LOGFILENAME="activity-watchdog.log"
+LOGFILE_BY_EXECUTION=true
+WAITING_FOR_PROC="Xorg"
+FIRST_WAITING=20
+OBS_INTERVAL=1
+FORCE_LIST_WATCHDOG_ENABLED=true
+BLACKLIST_WATCHDOG_ENABLED=true
+IDLE_WATCHDOG_ENABLED=true
+declare -a FORCE_LIST_PROC BLACKLIST_PROC EXCEPTION_LIST IDLE_KILL_LIST
+GENERAL_VIOLATION_PROCEDURE=""
+MINUTS_IN_IDLE_STATE=1
+SECONDS_TO_CLOSE=5
+TIMEFILE_ENABLED=false
+TIMEFILENAME="idle-watchdog.time"
+
 # Load config file
 CONFIGFILE="$EXEDIR/activity-watchdog.conf"
 if [ ! -f "$CONFIGFILE" ]; then
@@ -31,6 +49,20 @@ else
 fi
 
 LOGFILE="$LOGFILEDIR/$LOGFILENAME"
+
+# Force parameters to minimum value.
+if [[ $FIRST_WAITING -lt 0 ]]; then
+        FIRST_WATING=0
+fi
+if [[ $OBS_INTERVAL -le 0 ]]; then
+        OBS_INTERVAL=1
+fi
+if [[ $MINUTS_IN_IDLE_STATE -lt 1 ]]; then
+        $MINUTS_IN_IDLE_STATE=1
+fi
+if [[ $SECONDS_TO_CLOSE -lt 0 ]]; then
+        $SECONDS_TO_CLOSE=0
+fi
 
 
 #################### FUNCTIONS AND SHLIBs ##########################
