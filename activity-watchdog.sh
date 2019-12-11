@@ -69,7 +69,7 @@ main() {
         fi
 
         msgToLog "Waiting for the first execution of $WAITING_FOR_PROC ..."
-        declare -a PIDX                 # declare PIDX like array
+        declare -a PIDX                 # declare array PIDX
         PIDX=($(pgrep $WAITING_FOR_PROC))       # Obtain PIDs with $WAITING_FOR_PROC name to array
         # Waiting process
         while [ -z "${PIDX[0]}" ]; do

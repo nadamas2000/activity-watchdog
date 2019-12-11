@@ -15,8 +15,8 @@
 #####################################################################
 
 
-# Function that inspect the user executed programs and force execution
-# all software on configuration parameter (FORCE_LIST_PROC)
+# Function that inspect the executed programs by the user and forces to
+# execute all software in configuration parameter (FORCE_LIST_PROC)
 watchForcedList () {
         local i=0
         while [[ i -lt ${#FORCE_LIST_PROC[@]} ]];
@@ -42,8 +42,9 @@ watchForcedList () {
 }
 
 
-# Function that inspect the user executed programs and force to close
-# all software on configuration parameters (BLACKLIST_PROC, EXCEPTION_LIST)
+# Function that inspect the executed programs by the user and forces
+# to close all software in configuration parameters (BLACKLIST_PROC,
+# EXCEPTION_LIST)
 watchBlacklist () {
         declare -a EXCEPTION_PIDs PS PIDs EXEC
         PIDs=($(pgrep -u $USER -a | cut -d " " -f1))
@@ -91,9 +92,9 @@ watchBlacklist () {
 }
 
 
-# Main software function to execute the different procedures depends by
-# activation configuration especified inside config file
-#(FORCE_LIST_WATCHDOG_ENABLED, BLACKLIST_WATCHDOG_ENABLED)
+# The main function to execute the different procedures depending on
+# the activation configuration specified within the configuration file
+# (FORCE_LIST_WATCHDOG_ENABLED, BLACKLIST_WATCHDOG_ENABLED)
 softwareWatchdog () {
         if $FORCE_LIST_WATCHDOG_ENABLED; then
                 watchForcedList

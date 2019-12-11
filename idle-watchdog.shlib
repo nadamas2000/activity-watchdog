@@ -20,7 +20,7 @@ TIMEFILE=$EXEDIR"/"$TIMEFILENAME
 
 ########################## FUNCTIONS ###########################
 
-# Messaget to Timefile
+# Message to Timefile
 msgToTimefile () {
         $(echo $1 >> $TIMEFILE)
 
